@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Leiter-Isolator-Prüfstand</title>
+<style>
+/* Layout: oben der Versuchsaufbau, darunter Materialwahl, darunter die Ergebnisliste */
+:root{
+  --cond:#8a6200; --cond-soft:#fbefc4; --iso:#2a5d8f; --iso-soft:#dbe8f5; --weak:#6b3fa0; --weak-soft:#e9e0f4;
+  --bg:#eceee9; --panel:#fafbf8; --ink:#1c231f; --muted:#56635b; --line:#cdd5ce;
+  --wire:#28302b; --copper:#b0592a; --copper-soft:#f3e2d6;
+  --lcd-bg:#c6d2b4; --lcd-ink:#1d2914; --glow:#ffcf3a;
+  --ok:#2c7a44; --ok-soft:#dcefe2; --bad:#b0372b; --bad-soft:#f6deda;
+  --font-display:"Avenir Next","Trebuchet MS",ui-sans-serif,system-ui,sans-serif;
+  --font-body:ui-rounded,"Avenir Next",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-lcd:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131816; --panel:#1b221f; --ink:#e4ebe6; --muted:#9caaa2; --line:#2e3833;
+  --wire:#cbd5ce; --copper:#e58b52; --copper-soft:#3a2a20;
+  --lcd-bg:#1b2716; --lcd-ink:#b6ef84; --glow:#ffd859;
+  --ok:#6fcf8c; --ok-soft:#1c3324; --bad:#f08a7d; --bad-soft:#3a1f1c;
+  --cond:#f0c85a; --cond-soft:#3a3015; --iso:#8ec0ee; --iso-soft:#1d2d3d; --weak:#c9a9f2; --weak-soft:#2e2342;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#131816; --panel:#1b221f; --ink:#e4ebe6; --muted:#9caaa2; --line:#2e3833;
+  --wire:#cbd5ce; --copper:#e58b52; --copper-soft:#3a2a20;
+  --lcd-bg:#1b2716; --lcd-ink:#b6ef84; --glow:#ffd859;
+  --ok:#6fcf8c; --ok-soft:#1c3324; --bad:#f08a7d; --bad-soft:#3a1f1c;
+  --cond:#f0c85a; --cond-soft:#3a3015; --iso:#8ec0ee; --iso-soft:#1d2d3d; --weak:#c9a9f2; --weak-soft:#2e2342;
+  color-scheme:dark}
+[hidden]{display:none!important}
+
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:17px;line-height:1.45}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+h1,h2{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(1.7rem,4vw,2.3rem);font-weight:800}
+h2{font-size:1.15rem;font-weight:600}
+.eyebrow{font-size:.78rem;text-transform:uppercase;letter-spacing:.09em;color:var(--copper);font-weight:700}
+.sub{margin:6px 0 0;color:var(--muted)}
+.modes{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;width:fit-content;max-width:100%;flex-wrap:wrap}
+.modes button{font:inherit;font-weight:700;border:0;background:transparent;color:var(--muted);padding:8px 16px;border-radius:9px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--copper);color:#fff}
+button:focus-visible{outline:3px solid var(--copper);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.svgwrap{overflow-x:auto}
+svg.fig{width:100%;max-width:640px;display:block;margin:0 auto;height:auto}
+.wire{fill:none;stroke:var(--wire);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.sym{fill:var(--panel);stroke:var(--wire);stroke-width:3}
+.t{fill:var(--ink);font-family:var(--font-body);font-size:15px}
+.m{fill:var(--muted);font-family:var(--font-body);font-size:14px}
+.flow{fill:none;stroke:var(--copper);stroke-width:5;stroke-linecap:round;stroke-dasharray:1 16}
+#sample,#msample{transition:transform .3s ease,opacity .3s ease}
+.enter{opacity:0}
+@media (prefers-reduced-motion:reduce){#sample,#msample{transition:none}}
+
+.predict{border:2px dashed var(--copper);background:var(--copper-soft);border-radius:12px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.predict p{margin:0;flex:1 1 240px;font-weight:700}
+.btn{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 16px;border-radius:9px;cursor:pointer}
+.btn:hover{border-color:var(--copper)}
+.btn.primary{background:var(--copper);border-color:var(--copper);color:#fff}
+.say{margin:12px 0 0;min-height:1.5em;font-weight:700}
+.hintline{margin:4px 0 0;color:var(--muted);font-size:.92rem}
+
+.mats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mat{font:inherit;display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);cursor:pointer}
+.mat:hover{border-color:var(--copper)}
+.mat.active{border-color:var(--copper);box-shadow:0 0 0 2px var(--copper) inset}
+.mat .sw{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.3)}
+.mat .ck{color:var(--ok);font-weight:700}
+
+.tablewrap{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+th{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+td.num{font-family:var(--font-lcd);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font-size:.85rem;font-weight:700;border-radius:6px;padding:2px 8px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+.tag.neu{background:var(--bg);color:var(--muted)}
+.tag.cond{background:var(--cond-soft);color:var(--cond)}
+.tag.iso{background:var(--iso-soft);color:var(--iso)}
+.tag.weak{background:var(--weak-soft);color:var(--weak)}
+tr.rc td{background:var(--cond-soft)}
+tr.ri td{background:var(--iso-soft)}
+tr.rw td{background:var(--weak-soft)}
+tr.rc td.hl{color:var(--cond);font-weight:700}
+tr.ri td.hl{color:var(--iso);font-weight:700}
+tr.rw td.hl{color:var(--weak);font-weight:700}
+.key{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0;font-size:.9rem;color:var(--muted);align-items:center}
+.empty{color:var(--muted);font-style:italic}
+.foot{display:flex;justify-content:flex-end;margin-top:10px}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Physik · Elektrischer Strom</div>
+    <h1>Leiter oder Isolator?</h1>
+    <p class="sub" id="sub"></p>
+  </header>
+
+  <div class="modes" role="group" aria-label="Schritt wählen">
+    <button id="m1" aria-pressed="true">1 · Lampentest</button>
+    <button id="m2" aria-pressed="false">2 · Multimeter</button>
+  </div>
+
+  <section class="panel" aria-label="Versuchsaufbau">
+    <div class="svgwrap">
+      <!-- Schritt 1: Stromkreis -->
+      <svg class="fig" id="fig1" viewBox="0 0 640 325" role="img" aria-label="Stromkreis mit Batterie, Lampe und Prüfstrecke">
+        <defs><radialGradient id="glowG"><stop offset="0" style="stop-color:var(--glow);stop-opacity:1"/><stop offset="1" style="stop-color:var(--glow);stop-opacity:0"/></radialGradient></defs>
+        <path class="wire" d="M120,150 V50 H520 V250 H400 M240,250 H120 V170"/>
+        <path id="flow" class="flow" d="M120,150 V50 H520 V250 H120 Z" opacity="0"/>
+        <rect x="98" y="132" width="44" height="40" style="fill:var(--panel)"/>
+        <line x1="100" y1="140" x2="140" y2="140" class="wire"/>
+        <line x1="110" y1="156" x2="130" y2="156" class="wire" style="stroke-width:7;stroke-linecap:butt"/>
+        <text x="152" y="144" class="t">+</text><text x="152" y="166" class="t">−</text>
+        <text x="60" y="100" class="m" text-anchor="middle">Batterie</text>
+        <circle id="glow" cx="320" cy="50" r="52" fill="url(#glowG)" opacity="0"/>
+        <circle id="bulb" cx="320" cy="50" r="18" class="sym"/>
+        <path d="M307,37 L333,63 M333,37 L307,63" class="wire" style="stroke-width:2.5"/>
+        <text x="320" y="14" class="m" text-anchor="middle">Lampe</text>
+        <path d="M240,244 L262,247 L262,253 L240,256 Z" style="fill:var(--copper)"/>
+        <path d="M400,244 L378,247 L378,253 L400,256 Z" style="fill:var(--copper)"/>
+        <line id="gap" x1="268" y1="250" x2="372" y2="250" style="stroke:var(--muted);stroke-width:2;stroke-dasharray:4 6"/>
+        <text x="320" y="315" class="m" text-anchor="middle" id="gapTxt">Hier das Material einspannen</text>
+        <g id="sample" transform="translate(320,250)"></g>
+      </svg>
+      <!-- Schritt 2: Multimeter im Stromkreis -->
+      <svg class="fig" id="fig2" viewBox="0 0 640 325" role="img" aria-label="Stromkreis mit Multimeter und Prüfstrecke" hidden>
+        <path class="wire" d="M245,50 H120 V250 H240 M400,250 H520 V50 H395"/>
+        <rect x="245" y="20" width="150" height="62" rx="10" style="fill:var(--panel);stroke:var(--wire);stroke-width:3"/>
+        <rect x="255" y="28" width="130" height="46" rx="6" style="fill:var(--lcd-bg)"/>
+        <text id="mval" x="340" y="64" text-anchor="end" style="fill:var(--lcd-ink);font-family:var(--font-lcd);font-size:34px">OL</text>
+        <text id="munit" x="380" y="64" text-anchor="end" style="fill:var(--lcd-ink);font-family:var(--font-lcd);font-size:20px">Ω</text>
+        <text x="320" y="106" class="m" text-anchor="middle">Multimeter (Stellung Ω)</text>
+        <path d="M240,244 L262,247 L262,253 L240,256 Z" style="fill:var(--copper)"/>
+        <path d="M400,244 L378,247 L378,253 L400,256 Z" style="fill:var(--copper)"/>
+        <line id="gap2" x1="268" y1="250" x2="372" y2="250" style="stroke:var(--muted);stroke-width:2;stroke-dasharray:4 6"/>
+        <text x="320" y="315" class="m" text-anchor="middle" id="gapTxt2">Hier das Material einspannen</text>
+        <g id="msample" transform="translate(320,250)"></g>
+      </svg>
+    </div>
+    <p class="say" id="say" aria-live="polite"></p>
+    <div class="predict" id="predict" hidden>
+      <p id="predictQ"></p>
+      <button class="btn primary" data-pred="ja">Leitet</button>
+      <button class="btn primary" data-pred="nein">Leitet nicht</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="hm">
+    <h2 id="hm">Material wählen</h2>
+    <div class="mats" id="mats"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hl">
+    <h2 id="hl">Meine Ergebnisse</h2>
+    <div class="key"><span class="tag cond">Leiter</span><span class="tag iso">Isolator</span><span class="tag weak" id="keyW">schlechter Leiter</span></div>
+    <div class="tablewrap">
+      <table>
+        <thead id="thead"></thead>
+        <tbody id="tb"></tbody>
+      </table>
+    </div>
+    <div class="foot"><button class="btn" id="reset">Liste leeren</button></div>
+  </section>
+</div>
+
+<script>
+/* Widerstandswerte: Modell, typische Größenordnungen. OL = Overload (zu groß für das Multimeter) */
+const MATS=[
+ {id:'cu',name:'Kupferdraht',R:0.2,lamp:'hell',type:'wire',c:'#c47a3c'},
+ {id:'fe',name:'Eisennagel',R:0.4,lamp:'hell',type:'nail',c:'#80868c'},
+ {id:'ko',name:'Konstantandraht',R:5,lamp:'hell',type:'wire',c:'#b7af90'},
+ {id:'al',name:'Alufolie',R:0.1,lamp:'hell',type:'strip',c:'#c9cdd2'},
+ {id:'bk',name:'Büroklammer',R:0.3,lamp:'hell',type:'clip',c:'#9aa3ab'},
+ {id:'gr',name:'Bleistiftmine',R:6.5,lamp:'hell',type:'rod',c:'#3b3d42'},
+ {id:'sw',name:'Salzwasser',R:60,lamp:'schwach',type:'liquid',c:'#8fc9e3',ions:true},
+ {id:'lw',name:'Leitungswasser',R:20000,lamp:'dunkel',type:'liquid',c:'#b4dcec'},
+ {id:'dw',name:'Destilliertes Wasser',R:1500000,lamp:'dunkel',type:'liquid',c:'#dceff7'},
+ {id:'fi',name:'Finger',R:800000,lamp:'dunkel',type:'finger',c:'#dfae8c'},
+ {id:'ho',name:'Holzstab',R:null,lamp:'dunkel',type:'block',c:'#b98a55'},
+ {id:'ku',name:'Kunststofflineal',R:null,lamp:'dunkel',type:'block',c:'#3f8fd1'},
+ {id:'gl',name:'Glasstab',R:null,lamp:'dunkel',type:'rod',c:'#bfe3dd',glass:true},
+ {id:'gu',name:'Radiergummi',R:null,lamp:'dunkel',type:'block',c:'#e98c8c'},
+ {id:'pa',name:'Papierstreifen',R:null,lamp:'dunkel',type:'strip',c:'#f1ecdf'},
+];
+const cat=m=>m.R==null?'I':m.R<100?'L':'W';
+const $=s=>document.querySelector(s);
+const NS='http://www.w3.org/2000/svg';
+const st={mode:1,cur:null,pending:null,rows:{},order:[]};
+const de=s=>String(s).replace('.',',');
+const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const row=id=>{if(!st.rows[id]){st.rows[id]={pred:null,lamp:null,R:undefined};st.order.push(id);}return st.rows[id];};
+const unitR=R=>R>=1e6?'MΩ':R>=1e3?'kΩ':'Ω';
+const numR=R=>R==null?'OL':de((R>=1e6?R/1e6:R>=1e3?R/1e3:R).toFixed(R>=1e6?2:1));
+const fmtR=R=>R==null?'OL':numR(R)+' '+unitR(R);
+
+/* Probe zeichnen, zentriert auf (0,0), Breite ca. 116 */
+function draw(g,m){
+  g.innerHTML='';
+  if(!m)return;
+  const s='rgba(0,0,0,.35)';
+  if(m.type==='wire'){
+    let d='M-60,0 L-46,0';
+    for(let x=-46;x<=46;x+=2)d+=` L${x},${7*Math.sin((x+46)/4)}`;
+    d+=' L60,0';
+    g.appendChild(el('path',{d,fill:'none',stroke:m.c,'stroke-width':3,'stroke-linecap':'round'}));
+  }else if(m.type==='strip'){
+    g.appendChild(el('rect',{x:-62,y:-5,width:124,height:10,rx:1,fill:m.c,stroke:s}));
+  }else if(m.type==='nail'){
+    g.appendChild(el('rect',{x:-62,y:-5,width:20,height:10,rx:2,fill:m.c,stroke:s}));
+    g.appendChild(el('rect',{x:-44,y:-2.5,width:106,height:5,fill:m.c,stroke:s}));
+  }else if(m.type==='clip'){
+    g.appendChild(el('path',{d:'M-62,0 H-50 V-8 a8,8 0 0 1 8,-8 H42 a8,8 0 0 1 0,16 H-34 a5,5 0 0 1 0,-10 H32 M50,0 H62 M50,0 V8 a8,8 0 0 1 -8,8 H-38',fill:'none',stroke:m.c,'stroke-width':3,'stroke-linecap':'round'}));
+  }else if(m.type==='rod'){
+    g.appendChild(el('rect',{x:-62,y:-6,width:124,height:12,rx:6,fill:m.c,stroke:s,'fill-opacity':m.glass?.6:1}));
+  }else if(m.type==='block'){
+    g.appendChild(el('rect',{x:-60,y:-16,width:120,height:32,rx:3,fill:m.c,stroke:s}));
+    if(m.id==='ho')[-8,0,8].forEach(y=>g.appendChild(el('path',{d:`M-52,${y} q30,-4 54,0 t50,0`,fill:'none',stroke:'rgba(0,0,0,.25)','stroke-width':1.5})));
+    if(m.id==='ku')for(let x=-52;x<54;x+=8)g.appendChild(el('line',{x1:x,y1:-16,x2:x,y2:x%16===0?-4:-9,stroke:'rgba(255,255,255,.7)','stroke-width':1}));
+  }
+  if(m.type==='liquid'){
+    g.appendChild(el('rect',{x:-34,y:6,width:68,height:32,fill:m.c,'fill-opacity':.85}));
+    if(m.ions)for(let i=0;i<12;i++)g.appendChild(el('circle',{cx:-30+((i*37)%60),cy:10+((i*23)%26),r:1.6,fill:'#ffffff','fill-opacity':.9}));
+    g.appendChild(el('path',{d:'M-38,-6 V38 q0,6 6,6 H32 q6,0 6,-6 V-6',fill:'none',stroke:'var(--muted)','stroke-width':2.5}));
+    g.appendChild(el('path',{d:'M-60,0 H-22 V30 M60,0 H22 V30',fill:'none',stroke:'#8a8f94','stroke-width':5,'stroke-linecap':'round','stroke-linejoin':'round'}));
+  }else if(m.type==='finger'){
+    g.appendChild(el('rect',{x:-60,y:-13,width:120,height:26,rx:13,fill:m.c,stroke:s}));
+    g.appendChild(el('rect',{x:34,y:-9,width:18,height:18,rx:6,fill:'#f2d3c2',stroke:'rgba(0,0,0,.2)'}));
+    [-28,-16].forEach(x=>g.appendChild(el('path',{d:`M${x},-9 q3,9 0,18`,fill:'none',stroke:'rgba(0,0,0,.25)','stroke-width':1.5})));
+  }
+  g.classList.add('enter');requestAnimationFrame(()=>requestAnimationFrame(()=>g.classList.remove('enter')));
+}
+
+/* Auswahl */
+function build(){
+  const box=$('#mats');
+  MATS.forEach(m=>{
+    const b=document.createElement('button');
+    b.type='button';b.className='mat';b.id='mat-'+m.id;
+    b.innerHTML=`<span class="sw" style="background:${m.c}"></span>${m.name}<span class="ck" hidden>✓</span>`;
+    b.addEventListener('click',()=>pick(m.id));
+    box.appendChild(b);
+  });
+}
+function pick(id){
+  resetFig();
+  const m=MATS.find(x=>x.id===id);
+  if(st.mode===1 && !(st.rows[id]&&st.rows[id].pred)){
+    st.pending=id;
+    $('#predictQ').textContent=`Was vermutest du? Leitet „${m.name}“ den elektrischen Strom?`;
+    $('#predict').hidden=false;
+    $('#say').textContent='';
+    $('#predict button').focus();
+    return;
+  }
+  insert(id);
+}
+document.querySelectorAll('[data-pred]').forEach(b=>b.addEventListener('click',()=>{
+  const id=st.pending;row(id).pred=b.dataset.pred;
+  $('#predict').hidden=true;st.pending=null;insert(id);
+}));
+
+function insert(id){
+  const m=MATS.find(x=>x.id===id);
+  st.cur=id;
+  document.querySelectorAll('.mat').forEach(b=>b.classList.toggle('active',b.id==='mat-'+id));
+  const r=row(id);
+  if(st.mode===1){
+    draw($('#sample'),m);
+    $('#gap').style.display='none';$('#gapTxt').textContent=m.name+' eingespannt';
+    const on=m.lamp!=='dunkel';
+    r.lamp=on;r.lvl=m.lamp;
+    $('#glow').setAttribute('opacity',m.lamp==='hell'?1:m.lamp==='schwach'?.35:0);
+    $('#bulb').style.fill=on?'var(--glow)':'var(--panel)';
+    $('#bulb').style.fillOpacity=m.lamp==='schwach'?.45:1;
+    let msg=m.lamp==='hell'?`Die Lampe leuchtet. ${m.name} leitet den Strom.`
+      :m.lamp==='schwach'?`Die Lampe leuchtet nur schwach. ${m.name} leitet den Strom, aber nicht so gut.`
+      :m.R!=null?'Die Lampe bleibt dunkel. Fließt wirklich gar kein Strom? Das prüfst du in Schritt 2 mit dem Multimeter.':`Die Lampe bleibt dunkel. ${m.name} leitet den Strom nicht.`;
+    if(r.pred&&!(m.R!=null&&!on)){const ok=(r.pred==='ja')===on;msg+=ok?' Deine Vermutung stimmt.':' Deine Vermutung stimmt nicht.';}
+    if(m.id==='fi')msg+=' Mit Batterie ungefährlich. Niemals an der Steckdose ausprobieren!';
+    $('#say').textContent=msg;
+  }else{
+    draw($('#msample'),m);
+    $('#gap2').style.display='none';$('#gapTxt2').textContent=m.name+' eingespannt';
+    r.R=m.R;
+    $('#mval').textContent=numR(m.R);$('#munit').textContent=m.R==null?'Ω':unitR(m.R);
+    $('#say').textContent=m.R==null?'OL bedeutet: Der Widerstand ist zu groß für das Multimeter. Es fließt praktisch kein Strom.'
+      :cat(m)==='W'?`Das Multimeter zeigt ${fmtR(m.R)}. Der Widerstand ist groß, aber messbar. ${m.name} ist ein schlechter Leiter.`
+      :`Das Multimeter zeigt ${fmtR(m.R)}.`;
+  }
+  render();
+}
+
+/* Liste: Teil 1 ohne Widerstand, Teil 2 nur Widerstand */
+function render(){
+  const tb=$('#tb');
+  $('#thead').innerHTML=st.mode===1
+    ?'<tr><th>Material</th><th>Vermutung</th><th>Lampe</th><th>Ergebnis</th></tr>'
+    :'<tr><th>Material</th><th>Widerstand</th><th>Ergebnis</th></tr>';
+  const ids=st.order.filter(id=>st.mode===1?st.rows[id].lamp!=null:st.rows[id].R!==undefined);
+  if(!ids.length){tb.innerHTML=`<tr><td colspan="${st.mode===1?4:3}" class="empty">Noch nichts getestet.</td></tr>`;}
+  else{
+    tb.innerHTML='';
+    ids.forEach(id=>{
+      const m=MATS.find(x=>x.id===id),r=st.rows[id];
+      const tr=document.createElement('tr');
+      if(st.mode===1){
+        const pTxt=r.pred==='ja'?'leitet':r.pred==='nein'?'leitet nicht':'–';
+        let conf='';
+        const unklar=m.R!=null&&!r.lamp;
+        if(r.pred&&!unklar)conf=((r.pred==='ja')===r.lamp)?' <span class="tag ok">stimmt</span>':' <span class="tag bad">stimmt nicht</span>';
+        const res=r.lamp?'<span class="tag cond">Leiter</span>':unklar?'<span class="tag weak">unklar</span>':'<span class="tag iso">Isolator</span>';
+        tr.className=r.lamp?'rc':unklar?'rw':'ri';
+        const lt=r.lvl==='hell'?'leuchtet':r.lvl==='schwach'?'leuchtet schwach':'dunkel';
+        tr.innerHTML=`<td><strong>${m.name}</strong></td><td>${pTxt}${conf}</td><td class="hl">${lt}</td><td>${res}</td>`;
+      }else{
+        const c=cat(m);
+        tr.className={L:'rc',W:'rw',I:'ri'}[c];
+        const tag={L:'<span class="tag cond">Leiter</span>',W:'<span class="tag weak">schlechter Leiter</span>',I:'<span class="tag iso">Isolator</span>'}[c];
+        tr.innerHTML=`<td><strong>${m.name}</strong></td><td class="num hl">${c==='I'?'OL (zu groß)':fmtR(r.R)}</td><td>${tag}</td>`;
+      }
+      tb.appendChild(tr);
+    });
+  }
+  MATS.forEach(m=>{
+    const r=st.rows[m.id];
+    const done=r&&(st.mode===1?r.lamp!=null:r.R!==undefined);
+    $('#mat-'+m.id+' .ck').hidden=!done;
+  });
+}
+$('#reset').addEventListener('click',()=>{st.rows={};st.order=[];st.cur=null;$('#predict').hidden=true;resetFig();$('#say').textContent='';render();});
+
+function resetFig(){
+  $('#sample').innerHTML='';$('#msample').innerHTML='';
+  $('#gap').style.display='';$('#gapTxt').textContent='Hier das Material einspannen';
+  $('#glow').setAttribute('opacity',0);$('#bulb').style.fill='var(--panel)';
+  $('#mval').textContent='OL';$('#munit').textContent='Ω';$('#gap2').style.display='';$('#gapTxt2').textContent='Hier das Material einspannen';
+  document.querySelectorAll('.mat').forEach(b=>b.classList.remove('active'));
+  st.cur=null;
+}
+function setMode(k){
+  st.mode=k;
+  $('#m1').setAttribute('aria-pressed',k===1);$('#m2').setAttribute('aria-pressed',k===2);
+  $('#fig1').toggleAttribute('hidden',k!==1);$('#fig2').toggleAttribute('hidden',k!==2);
+  $('#predict').hidden=true;st.pending=null;$('#keyW').textContent=k===2?'schlechter Leiter':'unklar';
+  $('#sub').textContent=k===1
+    ?'Spanne ein Material in den Stromkreis ein. Vorher sagst du deine Vermutung. Leuchtet die Lampe?'
+    :'Miss mit dem Multimeter den elektrischen Widerstand in Ohm (Ω). Was fällt dir bei den Leitern und den Isolatoren auf?';
+  resetFig();$('#say').textContent='';render();
+}
+$('#m1').addEventListener('click',()=>setMode(1));
+$('#m2').addEventListener('click',()=>setMode(2));
+
+/* Stromfluss-Punkte */
+const flow=$('#flow');let off=0,last=performance.now();
+const reduce=matchMedia('(prefers-reduced-motion: reduce)');
+function tick(t){
+  const dt=Math.min(.1,(t-last)/1000);last=t;
+  const m=st.cur&&MATS.find(x=>x.id===st.cur);
+  const on=st.mode===1&&m&&m.lamp!=='dunkel';
+  flow.setAttribute('opacity',on?.9:0);
+  if(on&&!reduce.matches){off-=40*dt;flow.style.strokeDashoffset=off;}
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+build();setMode(1);
+</script>
+</body></html>
